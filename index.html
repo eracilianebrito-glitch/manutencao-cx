@@ -59,6 +59,9 @@
     .pin-input { font-size: 24px; text-align: center; letter-spacing: 12px; font-weight: bold; padding: 12px; margin-bottom: 16px; }
     .remember-box { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 16px; font-size: 13px; color: #475569; }
     .remember-box input { width: auto; }
+    
+    .item-material-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .btn-del-mat { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; width: 38px; border-radius: 8px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -254,16 +257,12 @@
           </div>
 
           <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px dashed #cbd5e1; margin-bottom:12px;">
-            <label style="color:#065f46; margin-bottom:8px;">📦 Materiais Utilizados no Serviço</label>
-            <div class="form-group">
-              <input type="text" id="modalMat1" placeholder="Material 1 (Ex: Disjuntor 20A)">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label style="color:#065f46; margin:0;">📦 Materiais Utilizados no Serviço</label>
+              <button type="button" onclick="adicionarCampoMaterial()" class="btn btn-sm btn-blue">+ Adicionar Material</button>
             </div>
-            <div class="form-group">
-              <input type="text" id="modalMat2" placeholder="Material 2 (Ex: Fita Isolante)">
-            </div>
-            <div class="form-group">
-              <input type="text" id="modalMat3" placeholder="Material 3 (Ex: Fio 2.5mm)">
-            </div>
+            
+            <div id="containerMateriaisDinamicos"></div>
           </div>
 
           <div class="form-group">
@@ -461,7 +460,8 @@
         var d = demandasList[i];
         var badgeType = d.status === 'Em Andamento' ? 'Andamento' : (d.status === 'Impedido/Pausado' ? 'Impedido' : (d.status === 'Concluído' ? 'Concluido' : 'Pendente'));
         var urgClass = d.urgencia === 'Urgente' ? 'urgencia-urgente' : 'urgencia-normal';
-        var listaMats = [d.mat1, d.mat2, d.mat3].filter(Boolean).join(', ');
+        
+        var listaMats = Array.isArray(d.materiais) ? d.materiais.join(', ') : [d.mat1, d.mat2, d.mat3].filter(Boolean).join(', ');
 
         var card = document.createElement('div');
         card.className = 'card';
@@ -521,9 +521,7 @@
           motivoPausa: '',
           foto: fotoBase64,
           obsTecnico: '',
-          mat1: '',
-          mat2: '',
-          mat3: '',
+          materiais: [],
           fotoTecnico: ''
         };
 
@@ -548,13 +546,24 @@
       switchTab('demandas');
     }
 
+    function adicionarCampoMaterial(valor = '') {
+      var container = document.getElementById('containerMateriaisDinamicos');
+      var row = document.createElement('div');
+      row.className = 'item-material-row';
+      row.innerHTML = '<input type="text" class="input-material-dinamico" placeholder="Nome do material..." value="' + valor + '">' +
+                      '<button type="button" class="btn-del-mat" onclick="this.parentElement.remove()">✕</button>';
+      container.appendChild(row);
+    }
+
     function abrirModalTecnico(key) {
       document.getElementById('modalKey').value = key;
       document.getElementById('modalObs').value = '';
-      document.getElementById('modalMat1').value = '';
-      document.getElementById('modalMat2').value = '';
-      document.getElementById('modalMat3').value = '';
       document.getElementById('modalFoto').value = '';
+      
+      var container = document.getElementById('containerMateriaisDinamicos');
+      container.innerHTML = '';
+      adicionarCampoMaterial(); // Inicia com 1 campo vazio
+
       document.getElementById('modalTecnico').className = 'modal-overlay';
     }
 
@@ -570,18 +579,22 @@
 
       var key = document.getElementById('modalKey').value;
       var obs = document.getElementById('modalObs').value;
-      var m1 = document.getElementById('modalMat1').value.trim();
-      var m2 = document.getElementById('modalMat2').value.trim();
-      var m3 = document.getElementById('modalMat3').value.trim();
+      
+      var inputs = document.querySelectorAll('.input-material-dinamico');
+      var listaMateriais = [];
+      inputs.forEach(function(inp) {
+        if (inp.value.trim() !== '') {
+          listaMateriais.push(inp.value.trim());
+        }
+      });
+
       var fotoInput = document.getElementById('modalFoto');
       var file = fotoInput.files ? fotoInput.files[0] : null;
 
       comprimirFoto(file, function(fotoBase64) {
         var dadosAtualizados = {
           obsTecnico: obs,
-          mat1: m1,
-          mat2: m2,
-          mat3: m3,
+          materiais: listaMateriais,
           status: 'Concluído'
         };
         if (fotoBase64) { dadosAtualizados.fotoTecnico = fotoBase64; }
@@ -653,7 +666,8 @@
       var contagemMateriais = {};
       for (var k = 0; k < demandasList.length; k++) {
         var item = demandasList[k];
-        var mats = [item.mat1, item.mat2, item.mat3];
+        var mats = Array.isArray(item.materiais) ? item.materiais : [item.mat1, item.mat2, item.mat3].filter(Boolean);
+        
         for (var m = 0; m < mats.length; m++) {
           var nomeMat = mats[m];
           if (nomeMat) {
