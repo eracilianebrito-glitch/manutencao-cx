@@ -338,6 +338,7 @@
     }
 
     function carregarInterfacePorPerfil(role) {
+      usuarioAtual = role;
       document.getElementById('sec-login').className = 'hidden';
       document.getElementById('app-main').className = '';
 
@@ -358,6 +359,8 @@
         document.getElementById('tab-demandas').style.width = '33.33%';
         switchTab('demandas');
       }
+
+      renderDemandas();
     }
 
     let deferredPrompt;
@@ -493,7 +496,7 @@
             '<div>' +
               (d.status === 'Pendente' ? '<button onclick="mudarStatus(\'' + d.key + '\', \'Em Andamento\')" class="btn btn-sm btn-blue">Iniciar</button>' : '') +
               (d.status === 'Em Andamento' || d.status === 'Impedido/Pausado' ? '<button onclick="pausar(\'' + d.key + '\')" class="btn btn-sm btn-amber">Pausar</button><button onclick="abrirModalTecnico(\'' + d.key + '\')" class="btn btn-sm">Concluir / Registrar</button>' : '') +
-              (usuarioAtual !== 'tecnico' ? '<button onclick="excluir(\'' + d.key + '\')" class="btn btn-sm btn-red">X</button>' : '') +
+              (usuarioAtual === 'gestor' ? '<button onclick="excluir(\'' + d.key + '\')" class="btn btn-sm btn-red">X</button>' : '') +
             '</div>' +
           '</div>';
         container.appendChild(card);
