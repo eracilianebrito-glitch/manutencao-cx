@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Manutenção - IFMS Campus Coxim</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f1f5f9; color: #334155; padding-bottom: 40px; }
+    
+    /* CABEÇALHO */
+    header { background-color: #065f46; color: white; padding: 14px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header-content { max-width: 800px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    .logo-box { background: white; color: #065f46; font-weight: bold; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 16px; }
+    
+    /* ABAS DE NAVEGAÇÃO */
+    .nav-tabs { background: white; border-bottom: 1px solid #e2e8f0; display: flex; max-width: 800px; margin: 0 auto; }
+    .tab-btn { background: none; border: none; padding: 14px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; width: 33.33%; text-align: center; }
+    .tab-btn.active { color: #059669; border-bottom-color: #059669; font-weight: bold; }
+    
+    /* CONTEÚDO PRINCIPAL */
+    main { max-width: 800px; margin: 16px auto; padding: 0 12px; }
+    .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    
+    /* BADGES & RÓTULOS */
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; }
+    .badge-Pendente { background: #fef3c7; color: #92400e; }
+    .badge-Andamento { background: #dbeafe; color: #1e40af; }
+    .badge-Concluido { background: #d1fae5; color: #065f46; }
+    .badge-Impedido { background: #fee2e2; color: #991b1b; }
+    
+    .urgencia-urgente { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+    .urgencia-normal { background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+    
+    /* FORMULÁRIOS & ENTRADAS */
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc; }
+    
+    /* BOTÕES */
+    .btn { background: #059669; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%; text-align: center; }
+    .btn-sm { width: auto; padding: 6px 10px; font-size: 11px; margin-left: 4px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-blue { background: #2563eb; color: white; }
+    .btn-amber { background: #d97706; color: white; }
+    .btn-red { background: #dc2626; color: white; }
+    
+    /* ESTATÍSTICAS E RELATÓRIO */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stat-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+    .stat-val { font-size: 20px; font-weight: 800; margin-top: 4px; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: bold; }
+    
+    .hidden { display: none !important; }
+    .img-preview { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 8px; border: 1px solid #cbd5e1; object-fit: cover; }
+    
+    @media print {
+      header, .nav-tabs, .btn { display: none !important; }
+      body { background: white; }
+      .card { border: none; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <div class="header-content">
+      <div style="display:flex; align-items:center;">
+        <div class="logo-box">IF</div>
+        <div>
+          <h1 style="font-size:16px;">IFMS Campus Coxim</h1>
+          <p style="font-size:11px; opacity:0.8;">Manutenção & Ordens de Serviço</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVEGAÇÃO DE ABAS -->
+  <div class="nav-tabs">
+    <button type="button" id="tab-btn-demandas" class="tab-btn active">Demandas</button>
+    <button type="button" id="tab-btn-nova" class="tab-btn">Nova O.S.</button>
+    <button type="button" id="tab-btn-relatorio" class="tab-btn">Relatório</button>
+  </div>
+
+  <main>
+    <!-- ABA 1: DEMANDAS -->
+    <section id="sec-demandas">
+      <div id="listaDemandas"></div>
+    </section>
+
+    <!-- ABA 2: NOVA OS -->
+    <section id="sec-nova" class="hidden">
+      <div class="card">
+        <h2 style="font-size:16px; margin-bottom:12px; color:#065f46;">Abrir Nova Ordem de Serviço</h2>
+        <form id="formNovaOS">
+          <div class="form-group">
+            <label for="osBloco">Bloco / Local *</label>
+            <select id="osBloco" required>
+              <option value="">Selecione o local...</option>
+              <option value="Bloco Administrativo">Bloco Administrativo</option>
+              <option value="Bloco de Ensino">Bloco de Ensino</option>
+              <option value="Bloco de Laboratórios">Bloco de Laboratórios</option>
+              <option value="Hotel Tecnológico">Hotel Tecnológico</option>
+              <option value="LAREN">LAREN</option>
+              <option value="Refeitório">Refeitório</option>
+              <option value="Área Externa / Quadra">Área Externa / Quadra</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="osSala">Sala / Ambiente Específico *</label>
+            <input type="text" id="osSala" required placeholder="Ex: Sala 04, Cozinha, Banheiro">
+          </div>
+
+          <div class="form-group">
+            <label for="osCategoria">Tipo de Serviço *</label>
+            <select id="osCategoria" required>
+              <option value="Elétrico">Elétrico</option>
+              <option value="Hidráulico">Hidráulico</option>
+              <option value="Pintura">Pintura</option>
+              <option value="Ar Condicionado">Ar Condicionado</option>
+              <option value="Limpeza">Limpeza</option>
+              <option value="Manutenção Geral">Manutenção Geral</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="osUrgencia">Prioridade / Urgência *</label>
+            <select id="osUrgencia" required>
+              <option value="Normal">Normal</option>
+              <option value="Urgente">🚨 URGENTE</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="osSolicitante">Solicitante (Seu Nome) *</label>
+            <input type="text" id="osSolicitante" required placeholder="Ex: Prof. Carlos">
+          </div>
+
+          <div class="form-group">
+            <label for="osResumo">Resumo do Problema *</label>
+            <textarea id="osResumo" required rows="3" placeholder="Descreva brevemente o problema..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="osFoto">Anexar Foto (Opcional)</label>
+            <input type="file" id="osFoto" accept="image/*">
+          </div>
+
+          <button type="submit" class="btn">Enviar Ordem de Serviço</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ABA 3: RELATÓRIO -->
+    <section id="sec-relatorio" class="hidden">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div style="font-size:11px; color:#64748b;">Total de O.S.</div>
+          <div id="statTotal" class="stat-val">0</div>
+        </div>
+        <div class="stat-card" style="border-color:#a7f3d0; background:#f0fdf4;">
+          <div style="font-size:11px; color:#059669; font-weight:bold;">Realizadas</div>
+          <div id="statConcluidas" class="stat-val" style="color:#059669;">0</div>
+        </div>
+        <div class="stat-card" style="border-color:#fef08a; background:#fefce8;">
+          <div style="font-size:11px; color:#ca8a04; font-weight:bold;">Não Realizadas</div>
+          <div id="statNaoRealizadas" class="stat-val" style="color:#ca8a04;">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:14px; color:#065f46;">Relatório Geral</h3>
+          <button type="button" id="btnPrint" class="btn btn-sm btn-blue">Imprimir / PDF</button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Serviço</th>
+                <th>Urgência</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaRelatorio"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ESTADO E DADOS DA APLICAÇÃO
+    var demandas = [];
+
+    function carregarDados() {
+      try {
+        var salvas = localStorage.getItem('ifms_demandas_v7');
+        if (salvas) {
+          demandas = JSON.parse(salvas);
+        }
+      } catch (e) {
+        demandas = [];
+      }
+
+      if (!demandas || demandas.length === 0) {
+        demandas = [
+          { id: 1, bloco: 'Bloco de Laboratórios', sala: 'Lab 03', categoria: 'Elétrico', urgencia: 'Urgente', solicitante: 'Prof. Ricardo', resumo: 'Bancada principal sem energia.', status: 'Pendente', data: '04/11/2026', motivoPausa: '', foto: '' },
+          { id: 2, bloco: 'Refeitório', sala: 'Cozinha', categoria: 'Hidráulico', urgencia: 'Normal', solicitante: 'Coord. Ana', resumo: 'Torneira da pia a pingar.', status: 'Concluído', data: '04/11/2026', motivoPausa: '', foto: '' }
+        ];
+      }
+      salvarEAtualizar();
+    }
+
+    function salvarEAtualizar() {
+      try {
+        localStorage.setItem('ifms_demandas_v7', JSON.stringify(demandas));
+      } catch (e) {}
+      renderDemandas();
+      renderRelatorio();
+    }
+
+    // GESTÃO DE NAVEGAÇÃO DE ABAS
+    function switchTab(tabName) {
+      document.getElementById('sec-demandas').classList.add('hidden');
+      document.getElementById('sec-nova').classList.add('hidden');
+      document.getElementById('sec-relatorio').classList.add('hidden');
+
+      document.getElementById('tab-btn-demandas').classList.remove('active');
+      document.getElementById('tab-btn-nova').classList.remove('active');
+      document.getElementById('tab-btn-relatorio').classList.remove('active');
+
+      document.getElementById('sec-' + tabName).classList.remove('hidden');
+      document.getElementById('tab-btn-' + tabName).classList.add('active');
+    }
+
+    // RENDERIZAR CARDS DA LISTA DE DEMANDAS
+    function renderDemandas() {
+      var container = document.getElementById('listaDemandas');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (demandas.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#94a3b8;">Nenhuma ordem de serviço registrada.</p>';
+        return;
+      }
+
+      for (var i = 0; i < demandas.length; i++) {
+        (function(i) {
+          var d = demandas[i];
+          var badgeType = d.status === 'Em Andamento' ? 'Andamento' : (d.status === 'Impedido/Pausado' ? 'Impedido' : (d.status === 'Concluído' ? 'Concluido' : 'Pendente'));
+          var urgClass = d.urgencia === 'Urgente' ? 'urgencia-urgente' : 'urgencia-normal';
+
+          var card = document.createElement('div');
+          card.className = 'card';
+          
+          var html = '<div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">' +
+            '<div>' +
+              '<strong style="color:#065f46; font-size:13px;">' + escapeHtml(d.bloco) + ' - ' + escapeHtml(d.sala) + '</strong> ' +
+              '<span class="' + urgClass + '">' + escapeHtml(d.urgencia) + '</span>' +
+            '</div>' +
+            '<span class="badge badge-' + badgeType + '">' + escapeHtml(d.status) + '</span>' +
+          '</div>' +
+          '<p style="font-size:14px; font-weight:bold; margin-bottom:4px;">' + escapeHtml(d.categoria) + '</p>' +
+          '<p style="font-size:13px; color:#475569; background:#f8fafc; padding:8px; border-radius:6px; margin-bottom:8px;">' + escapeHtml(d.resumo) + '</p>';
+
+          if (d.foto) {
+            html += '<div style="margin-bottom:8px;"><img src="' + d.foto + '" class="img-preview" alt="Foto da O.S." /></div>';
+          }
+
+          if (d.motivoPausa) {
+            html += '<p style="font-size:12px; color:#dc2626; margin-bottom:8px;"><strong>Pausa/Motivo:</strong> ' + escapeHtml(d.motivoPausa) + '</p>';
+          }
+
+          html += '<div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">' +
+            '<span>' + escapeHtml(d.solicitante) + ' (' + escapeHtml(d.data) + ')</span>' +
+            '<div>';
+
+          if (d.status === 'Pendente') {
+            html += '<button type="button" class="btn-sm btn-blue btn-iniciar" data-id="' + d.id + '">Iniciar</button>';
+          }
+          if (d.status === 'Em Andamento' || d.status === 'Impedido/Pausado') {
+            html += '<button type="button" class="btn-sm btn-amber btn-pausa" data-id="' + d.id + '">Pausar</button>';
+            html += '<button type="button" class="btn-sm btn-concluir" style="background:#059669; color:white;" data-id="' + d.id + '">Concluir</button>';
+          }
+          html += '<button type="button" class="btn-sm btn-red btn-excluir" data-id="' + d.id + '">X</button>';
+
+          html += '</div></div>';
+
+          card.innerHTML = html;
+          container.appendChild(card);
+        })(i);
+      }
+
+      // VINCULAR EVENTOS DOS BOTÕES
+      var btnIniciars = container.querySelectorAll('.btn-iniciar');
+      for (var j = 0; j < btnIniciars.length; j++) {
+        btnIniciars[j].onclick = function() { mudarStatus(parseInt(this.getAttribute('data-id')), 'Em Andamento'); };
+      }
+
+      var btnPausas = container.querySelectorAll('.btn-pausa');
+      for (var k = 0; k < btnPausas.length; k++) {
+        btnPausas[k].onclick = function() { pausar(parseInt(this.getAttribute('data-id'))); };
+      }
+
+      var btnConcluirs = container.querySelectorAll('.btn-concluir');
+      for (var l = 0; l < btnConcluirs.length; l++) {
+        btnConcluirs[l].onclick = function() { mudarStatus(parseInt(this.getAttribute('data-id')), 'Concluído'); };
+      }
+
+      var btnExcluirs = container.querySelectorAll('.btn-excluir');
+      for (var m = 0; m < btnExcluirs.length; m++) {
+        btnExcluirs[m].onclick = function() { excluir(parseInt(this.getAttribute('data-id'))); };
+      }
+    }
+
+    // AÇÕES DE MANUTENÇÃO
+    function mudarStatus(id, novoStatus) {
+      for (var i = 0; i < demandas.length; i++) {
+        if (demandas[i].id === id) {
+          demandas[i].status = novoStatus;
+          break;
+        }
+      }
+      salvarEAtualizar();
+    }
+
+    function pausar(id) {
+      var motivo = prompt("Motivo de não realizar / pausar o atendimento:");
+      if (motivo) {
+        for (var i = 0; i < demandas.length; i++) {
+          if (demandas[i].id === id) {
+            demandas[i].motivoPausa = motivo;
+            demandas[i].status = 'Impedido/Pausado';
+            break;
+          }
+        }
+        salvarEAtualizar();
+      }
+    }
+
+    function excluir(id) {
+      if (confirm("Deseja realmente excluir esta ordem de serviço?")) {
+        demandas = demandas.filter(function(d) { return d.id !== id; });
+        salvarEAtualizar();
+      }
+    }
+
+    // RENDERIZAR TABELA E RELATÓRIO
+    function renderRelatorio() {
+      var totalElem = document.getElementById('statTotal');
+      var conclElem = document.getElementById('statConcluidas');
+      var naoConclElem = document.getElementById('statNaoRealizadas');
+      var tb = document.getElementById('tabelaRelatorio');
+
+      if (!totalElem || !conclElem || !naoConclElem || !tb) return;
+
+      totalElem.innerText = demandas.length;
+      var concCount = 0;
+      var naoConcCount = 0;
+
+      for (var i = 0; i < demandas.length; i++) {
+        if (demandas[i].status === 'Concluído') {
+          concCount++;
+        } else {
+          naoConcCount++;
+        }
+      }
+
+      conclElem.innerText = concCount;
+      naoConclElem.innerText = naoConcCount;
+
+      tb.innerHTML = '';
+      for (var j = 0; j < demandas.length; j++) {
+        var d = demandas[j];
+        var situacao = d.status === 'Concluído' ? '<span style="color:#059669; font-weight:bold;">Realizada</span>' : '<span style="color:#ca8a04; font-weight:bold;">Não Realizada (' + escapeHtml(d.status) + ')</span>';
+        var urgLabel = d.urgencia === 'Urgente' ? '<strong style="color:#dc2626;">URGENTE</strong>' : 'Normal';
+
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + escapeHtml(d.data) + '</td>' +
+          '<td>' + escapeHtml(d.bloco) + ' - ' + escapeHtml(d.sala) + '</td>' +
+          '<td>' + escapeHtml(d.categoria) + '</td>' +
+          '<td>' + urgLabel + '</td>' +
+          '<td>' + situacao + '</td>';
+        tb.appendChild(tr);
+      }
+    }
+
+    // AUXILIAR DE SEGURANÇA CONTRA XSS
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // INICIALIZAÇÃO DE EVENTOS DO SISTEMA
+    document.addEventListener('DOMContentLoaded', function() {
+      // Botoes de Navegação
+      document.getElementById('tab-btn-demandas').onclick = function() { switchTab('demandas'); };
+      document.getElementById('tab-btn-nova').onclick = function() { switchTab('nova'); };
+      document.getElementById('tab-btn-relatorio').onclick = function() { switchTab('relatorio'); };
+
+      // Botao de Impressao
+      document.getElementById('btnPrint').onclick = function() { window.print(); };
+
+      // Formulário de Nova OS
+      document.getElementById('formNovaOS').onsubmit = function(e) {
+        e.preventDefault();
+        var fotoInput = document.getElementById('osFoto');
+
+        var novo = {
+          id: Date.now(),
+          bloco: document.getElementById('osBloco').value,
+          sala: document.getElementById('osSala').value,
+          categoria: document.getElementById('osCategoria').value,
+          urgencia: document.getElementById('osUrgencia').value,
+          solicitante: document.getElementById('osSolicitante').value,
+          resumo: document.getElementById('osResumo').value,
+          status: 'Pendente',
+          data: new Date().toLocaleDateString('pt-BR'),
+          motivoPausa: '',
+          foto: ''
+        };
+
+        if (fotoInput.files && fotoInput.files[0]) {
+          var reader = new FileReader();
+          reader.onload = function(evt) {
+            novo.foto = evt.target.result;
+            demandas.unshift(novo);
+            salvarEAtualizar();
+            limparFormulario();
+          };
+          reader.readAsDataURL(fotoInput.files[0]);
+        } else {
+          demandas.unshift(novo);
+          salvarEAtualizar();
+          limparFormulario();
+        }
+      };
+
+      function limparFormulario() {
+        document.getElementById('formNovaOS').reset();
+        switchTab('demandas');
+      }
+
+      // Carregar Inicialmente
+      carregarDados();
+    });
+  </script>
+</body>
+</html>
