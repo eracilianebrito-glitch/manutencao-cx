@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Manutenção - IFMS Coxim</title>
   
-  <!-- CONEXÃO PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#065f46">
   
-  <!-- BIBLIOTECAS FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
@@ -53,7 +51,6 @@
     .sub-tab-btn.active { background: #065f46; color: white; border-color: #065f46; }
     .tech-box { background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #a7f3d0; margin-top: 8px; }
     
-    /* MODAL DE RESPOSTA DO OFICIAL DE MANUTENÇÃO */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal-card { background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
   </style>
@@ -80,12 +77,10 @@
   </div>
 
   <main>
-    <!-- LISTA DE DEMANDAS -->
     <section id="sec-demandas">
-      <div id="listaDemandas"><p style="text-align:center; padding:20px; color:#94a3b8;">Carregando demandas em tempo real...</p></div>
+      <div id="listaDemandas"><p style="text-align:center; padding:20px; color:#94a3b8;">Sincronizando com a nuvem...</p></div>
     </section>
 
-    <!-- NOVA OS (SOLICITANTE) -->
     <section id="sec-nova" class="hidden">
       <div class="card">
         <h2 style="font-size:16px; margin-bottom:12px; color:#065f46;">Abrir Nova Ordem de Serviço</h2>
@@ -141,22 +136,20 @@
 
           <div class="form-group">
             <label>Foto Inicial do Problema (Opcional)</label>
-            <input type="file" id="osFoto" accept="image/*" capture="environment">
+            <input type="file" id="osFoto" accept="image/*">
           </div>
 
-          <button type="submit" class="btn">Enviar Ordem de Serviço</button>
+          <button type="submit" id="btnSalvarOS" class="btn">Enviar Ordem de Serviço</button>
         </form>
       </div>
     </section>
 
-    <!-- RELATÓRIO -->
     <section id="sec-relatorio" class="hidden">
       <div class="sub-tabs">
         <button id="subtab-os" class="sub-tab-btn active" onclick="switchRelatorioTab('os')">📊 Relatório de O.S.</button>
         <button id="subtab-mat" class="sub-tab-btn" onclick="switchRelatorioTab('materiais')">📦 Relatório de Materiais</button>
       </div>
 
-      <!-- RELATÓRIO DE OS -->
       <div id="rel-visao-os">
         <div class="stats-grid">
           <div class="stat-card">
@@ -194,7 +187,6 @@
         </div>
       </div>
 
-      <!-- RELATÓRIO DE MATERIAIS -->
       <div id="rel-visao-materiais" class="hidden">
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -216,7 +208,6 @@
     </section>
   </main>
 
-  <!-- MODAL DE RESPOSTA DO TÉCNICO / OFICIAL DE MANUTENÇÃO -->
   <div id="modalTecnico" class="modal-overlay hidden">
     <div class="modal-card">
       <h3 style="color:#065f46; margin-bottom:12px; font-size:16px;">🛠️ Resposta do Oficial de Manutenção</h3>
@@ -243,11 +234,11 @@
 
         <div class="form-group">
           <label>Foto do Serviço Concluído (Opcional)</label>
-          <input type="file" id="modalFoto" accept="image/*" capture="environment">
+          <input type="file" id="modalFoto" accept="image/*">
         </div>
 
         <div style="display:flex; gap:8px; margin-top:16px;">
-          <button type="submit" class="btn">Concluir e Salvar</button>
+          <button type="submit" id="btnSalvarModal" class="btn">Concluir e Salvar</button>
           <button type="button" onclick="fecharModal()" class="btn btn-red" style="width: auto;">Cancelar</button>
         </div>
       </form>
@@ -255,7 +246,6 @@
   </div>
 
   <script>
-    // CHAVES DO FIREBASE DO SEU PROJETO MANUTENCAO-CX
     const firebaseConfig = {
       apiKey: "AIzaSyB8mh9ZwCEubDx0IQy_b-ZbKTkO2HNbsV4",
       authDomain: "manutencao-cx.firebaseapp.com",
@@ -270,7 +260,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref('demandas');
 
-    // REGISTRO PWA
     let deferredPrompt;
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(function(e) { console.log(e); });
@@ -297,7 +286,7 @@
 
     var demandasList = [];
 
-    // LEITURA EM TEMPO REAL NO FIREBASE
+    // LEITURA EM TEMPO REAL COM SYNC COMPLETO
     db.on('value', function(snapshot) {
       demandasList = [];
       var data = snapshot.val();
@@ -310,7 +299,36 @@
       }
       renderDemandas();
       renderRelatorio();
+    }, function(error) {
+      console.log("Erro no Firebase, carregando local:", error);
     });
+
+    // COMPRESSOR DE IMAGEM AUTOMÁTICO (PARA NÃO TRAVAR O CELULAR)
+    function comprimirFoto(file, callback) {
+      if (!file) { callback(''); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var ctx = canvas.getContext('2d');
+          var maxDim = 600;
+          var width = img.width;
+          var height = img.height;
+          if (width > height) {
+            if (width > maxDim) { height *= maxDim / width; width = maxDim; }
+          } else {
+            if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
 
     function switchTab(tab) {
       document.getElementById('sec-demandas').className = 'hidden';
@@ -339,7 +357,7 @@
       container.innerHTML = '';
 
       if (demandasList.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#94a3b8;">Nenhuma ordem de serviço registrada.</p>';
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#94a3b8;">Nenhuma ordem de serviço salva na nuvem.</p>';
         return;
       }
 
@@ -387,38 +405,42 @@
 
     function salvarNovaOS(e) {
       e.preventDefault();
-      var fotoInput = document.getElementById('osFoto');
-      
-      var novo = {
-        bloco: document.getElementById('osBloco').value,
-        sala: document.getElementById('osSala').value,
-        categoria: document.getElementById('osCategoria').value,
-        urgencia: document.getElementById('osUrgencia').value,
-        solicitante: document.getElementById('osSolicitante').value,
-        resumo: document.getElementById('osResumo').value,
-        status: 'Pendente',
-        data: new Date().toLocaleDateString('pt-BR'),
-        motivoPausa: '',
-        foto: '',
-        obsTecnico: '',
-        mat1: '',
-        mat2: '',
-        mat3: '',
-        fotoTecnico: ''
-      };
+      var btn = document.getElementById('btnSalvarOS');
+      btn.innerText = "Enviando...";
+      btn.disabled = true;
 
-      if (fotoInput.files && fotoInput.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(evt) {
-          novo.foto = evt.target.result;
-          db.push(novo);
-          limparEVoltar();
+      var fotoInput = document.getElementById('osFoto');
+      var file = fotoInput.files ? fotoInput.files[0] : null;
+
+      comprimirFoto(file, function(fotoBase64) {
+        var novo = {
+          bloco: document.getElementById('osBloco').value,
+          sala: document.getElementById('osSala').value,
+          categoria: document.getElementById('osCategoria').value,
+          urgencia: document.getElementById('osUrgencia').value,
+          solicitante: document.getElementById('osSolicitante').value,
+          resumo: document.getElementById('osResumo').value,
+          status: 'Pendente',
+          data: new Date().toLocaleDateString('pt-BR'),
+          motivoPausa: '',
+          foto: fotoBase64,
+          obsTecnico: '',
+          mat1: '',
+          mat2: '',
+          mat3: '',
+          fotoTecnico: ''
         };
-        reader.readAsDataURL(fotoInput.files[0]);
-      } else {
-        db.push(novo);
-        limparEVoltar();
-      }
+
+        db.push(novo).then(function() {
+          btn.innerText = "Enviar Ordem de Serviço";
+          btn.disabled = false;
+          limparEVoltar();
+        }).catch(function(err) {
+          alert("Erro ao salvar no Firebase: " + err.message);
+          btn.innerText = "Enviar Ordem de Serviço";
+          btn.disabled = false;
+        });
+      });
     }
 
     function limparEVoltar() {
@@ -446,33 +468,34 @@
 
     function salvarRespostaTecnico(e) {
       e.preventDefault();
+      var btn = document.getElementById('btnSalvarModal');
+      btn.innerText = "Salvando...";
+      btn.disabled = true;
+
       var key = document.getElementById('modalKey').value;
       var obs = document.getElementById('modalObs').value;
       var m1 = document.getElementById('modalMat1').value.trim();
       var m2 = document.getElementById('modalMat2').value.trim();
       var m3 = document.getElementById('modalMat3').value.trim();
       var fotoInput = document.getElementById('modalFoto');
+      var file = fotoInput.files ? fotoInput.files[0] : null;
 
-      var dadosAtualizados = {
-        obsTecnico: obs,
-        mat1: m1,
-        mat2: m2,
-        mat3: m3,
-        status: 'Concluído'
-      };
-
-      if (fotoInput.files && fotoInput.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(evt) {
-          dadosAtualizados.fotoTecnico = evt.target.result;
-          db.child(key).update(dadosAtualizados);
-          fecharModal();
+      comprimirFoto(file, function(fotoBase64) {
+        var dadosAtualizados = {
+          obsTecnico: obs,
+          mat1: m1,
+          mat2: m2,
+          mat3: m3,
+          status: 'Concluído'
         };
-        reader.readAsDataURL(fotoInput.files[0]);
-      } else {
-        db.child(key).update(dadosAtualizados);
-        fecharModal();
-      }
+        if (fotoBase64) { dadosAtualizados.fotoTecnico = fotoBase64; }
+
+        db.child(key).update(dadosAtualizados).then(function() {
+          btn.innerText = "Concluir e Salvar";
+          btn.disabled = false;
+          fecharModal();
+        });
+      });
     }
 
     function mudarStatus(key, st) {
