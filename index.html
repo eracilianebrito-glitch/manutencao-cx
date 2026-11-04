@@ -5,13 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Manutenção - IFMS Coxim</title>
   
-  <!-- CONEXÃO PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#065f46">
-  
-  <!-- BIBLIOTECAS FIREBASE -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
@@ -53,7 +48,6 @@
     .sub-tab-btn.active { background: #065f46; color: white; border-color: #065f46; }
     .tech-box { background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #a7f3d0; margin-top: 8px; }
     
-    /* MODAL DE FINALIZAÇÃO PELO TÉCNICO */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal-card { background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
   </style>
@@ -82,7 +76,7 @@
   <main>
     <!-- LISTA DE DEMANDAS -->
     <section id="sec-demandas">
-      <div id="listaDemandas"><p style="text-align:center; padding:20px; color:#94a3b8;">A carregar demandas em tempo real...</p></div>
+      <div id="listaDemandas"></div>
     </section>
 
     <!-- NOVA OS (SOLICITANTE) -->
@@ -216,7 +210,7 @@
     </section>
   </main>
 
-  <!-- MODAL DE REGISTO PELO TÉCNICO / OFICIAL DE MANUTENÇÃO -->
+  <!-- MODAL DE RESPOSTA DO TÉCNICO / OFICIAL DE MANUTENÇÃO -->
   <div id="modalTecnico" class="modal-overlay hidden">
     <div class="modal-card">
       <h3 style="color:#065f46; margin-bottom:12px; font-size:16px;">🛠️ Resposta do Oficial de Manutenção</h3>
@@ -225,19 +219,19 @@
         
         <div class="form-group">
           <label>Observações do Serviço Realizado *</label>
-          <textarea id="modalObs" required rows="3" placeholder="Ex: Foi trocado o disjuntor queimado e refeita a fiabilidade da fiação."></textarea>
+          <textarea id="modalObs" required rows="3" placeholder="Ex: Substituído o disjuntor queimado por um novo de 20A."></textarea>
         </div>
 
         <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px dashed #cbd5e1; margin-bottom:12px;">
           <label style="color:#065f46; margin-bottom:8px;">📦 Materiais Utilizados no Serviço</label>
           <div class="form-group">
-            <input type="text" id="modalMat1" placeholder="Material 1 (Ex: Lâmpada LED 9W)">
+            <input type="text" id="modalMat1" placeholder="Material 1 (Ex: Disjuntor 20A)">
           </div>
           <div class="form-group">
             <input type="text" id="modalMat2" placeholder="Material 2 (Ex: Fita Isolante)">
           </div>
           <div class="form-group">
-            <input type="text" id="modalMat3" placeholder="Material 3 (Ex: Disjuntor 20A)">
+            <input type="text" id="modalMat3" placeholder="Material 3 (Ex: Fio 2.5mm)">
           </div>
         </div>
 
@@ -255,72 +249,26 @@
   </div>
 
   <script>
-    // CONFIGURAÇÃO DO FIREBASE (SUBSTITUA COM AS SUAS CHAVES DO FIREBASE)
-    const firebaseConfig = {
-      apiKey: "COLE_AQUI",
-      authDomain: "COLE_AQUI",
-      databaseURL: "COLE_AQUI",
-      projectId: "COLE_AQUI",
-      storageBucket: "COLE_AQUI",
-      messagingSenderId: "COLE_AQUI",
-      appId: "COLE_AQUI"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('demandas');
-
-    // REGISTRO PWA
-    let deferredPrompt;
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(function(e) { console.log(e); });
-    }
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      const btn = document.getElementById('btnInstalar');
-      if (btn) btn.style.display = 'block';
-    });
-
-    function instalarPWA() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            document.getElementById('btnInstalar').style.display = 'none';
-          }
-          deferredPrompt = null;
-        });
-      }
-    }
-
+    var STORAGE_KEY = 'ifms_demandas_v9_local';
     var demandasList = [];
 
-    // LEITURA EM TEMPO REAL NA NUVEM OU STORAGE LOCAL SE FIREBASE NÃO CONFIGURADO
-    db.on('value', function(snapshot) {
-      demandasList = [];
-      var data = snapshot.val();
-      if (data) {
-        Object.keys(data).forEach(function(key) {
-          var item = data[key];
-          item.key = key;
-          demandasList.unshift(item);
-        });
-      }
-      renderDemandas();
-      renderRelatorio();
-    }, function(error) {
-      // Fallback para LocalStorage caso o Firebase ainda não tenha as chaves
-      carregarLocal();
-    });
-
     function carregarLocal() {
-      var salvas = localStorage.getItem('ifms_demandas_v8');
+      var salvas = localStorage.getItem(STORAGE_KEY);
       if (salvas) {
-        try { demandasList = JSON.parse(salvas); } catch(e) {}
+        try { demandasList = JSON.parse(salvas); } catch(e) { demandasList = []; }
+      } else {
+        demandasList = [
+          { id: 1, bloco: 'Bloco de Laboratórios', sala: 'Lab 03', categoria: 'Elétrico', urgencia: 'Urgente', solicitante: 'Prof. Ricardo', resumo: 'Bancada principal sem energia.', status: 'Pendente', data: '04/11/2026', motivoPausa: '', foto: '', obsTecnico: '', mat1: '', mat2: '', mat3: '', fotoTecnico: '' },
+          { id: 2, bloco: 'Refeitório', sala: 'Cozinha', categoria: 'Hidráulico', urgencia: 'Normal', solicitante: 'Coord. Ana', resumo: 'Torneira da pia a pingar.', status: 'Concluído', data: '04/11/2026', motivoPausa: '', foto: '', obsTecnico: 'Trocada a vedação da torneira.', mat1: 'Veda Rosca', mat2: 'Reparo de Torneira', mat3: '', fotoTecnico: '' }
+        ];
+        salvarNoStorage();
       }
       renderDemandas();
       renderRelatorio();
+    }
+
+    function salvarNoStorage() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(demandasList)); } catch(e) {}
     }
 
     function switchTab(tab) {
@@ -374,7 +322,6 @@
           '<p style="font-size:13px; color:#475569; background:#f8fafc; padding:8px; border-radius:6px; margin-bottom:8px;">' + d.resumo + '</p>' +
           (d.foto ? '<div style="margin-bottom:8px;"><p style="font-size:11px; color:#64748b;">Foto do Problema:</p><img src="' + d.foto + '" class="img-preview" /></div>' : '') +
           
-          /* PAINEL DE RESPOSTA DO OFICIAL DE MANUTENÇÃO */
           ((d.obsTecnico || listaMats || d.fotoTecnico) ? 
             '<div class="tech-box">' +
               '<p style="font-size:12px; font-weight:bold; color:#065f46; margin-bottom:4px;">🛠️ Parecer da Manutenção:</p>' +
@@ -388,9 +335,9 @@
           '<div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:10px;">' +
             '<span>' + d.solicitante + ' (' + d.data + ')</span>' +
             '<div>' +
-              (d.status === 'Pendente' ? '<button onclick="mudarStatus(\'' + (d.key||d.id) + '\', \'Em Andamento\')" class="btn btn-sm btn-blue">Iniciar</button>' : '') +
-              (d.status === 'Em Andamento' || d.status === 'Impedido/Pausado' ? '<button onclick="pausar(\'' + (d.key||d.id) + '\')" class="btn btn-sm btn-amber">Pausar</button><button onclick="abrirModalTecnico(\'' + (d.key||d.id) + '\')" class="btn btn-sm">Concluir / Registrar</button>' : '') +
-              '<button onclick="excluir(\'' + (d.key||d.id) + '\')" class="btn btn-sm btn-red">X</button>' +
+              (d.status === 'Pendente' ? '<button onclick="mudarStatus(' + d.id + ', \'Em Andamento\')" class="btn btn-sm btn-blue">Iniciar</button>' : '') +
+              (d.status === 'Em Andamento' || d.status === 'Impedido/Pausado' ? '<button onclick="pausar(' + d.id + ')" class="btn btn-sm btn-amber">Pausar</button><button onclick="abrirModalTecnico(' + d.id + ')" class="btn btn-sm">Concluir / Registrar</button>' : '') +
+              '<button onclick="excluir(' + d.id + ')" class="btn btn-sm btn-red">X</button>' +
             '</div>' +
           '</div>';
         container.appendChild(card);
@@ -402,6 +349,7 @@
       var fotoInput = document.getElementById('osFoto');
       
       var novo = {
+        id: Date.now(),
         bloco: document.getElementById('osBloco').value,
         sala: document.getElementById('osSala').value,
         categoria: document.getElementById('osCategoria').value,
@@ -423,23 +371,22 @@
         var reader = new FileReader();
         reader.onload = function(evt) {
           novo.foto = evt.target.result;
-          enviarOS(novo);
+          demandasList.unshift(novo);
+          salvarEAtualizar();
+          limparEVoltar();
         };
         reader.readAsDataURL(fotoInput.files[0]);
       } else {
-        enviarOS(novo);
+        demandasList.unshift(novo);
+        salvarEAtualizar();
+        limparEVoltar();
       }
     }
 
-    function enviarOS(novo) {
-      try { db.push(novo); } catch(e) {
-        novo.id = Date.now();
-        demandasList.unshift(novo);
-        localStorage.setItem('ifms_demandas_v8', JSON.stringify(demandasList));
-        renderDemandas();
-        renderRelatorio();
-      }
-      limparEVoltar();
+    function salvarEAtualizar() {
+      salvarNoStorage();
+      renderDemandas();
+      renderRelatorio();
     }
 
     function limparEVoltar() {
@@ -451,9 +398,8 @@
       switchTab('demandas');
     }
 
-    /* MODAL DE ATENDIMENTO DO OFICIAL DE MANUTENÇÃO */
-    function abrirModalTecnico(key) {
-      document.getElementById('modalKey').value = key;
+    function abrirModalTecnico(id) {
+      document.getElementById('modalKey').value = id;
       document.getElementById('modalObs').value = '';
       document.getElementById('modalMat1').value = '';
       document.getElementById('modalMat2').value = '';
@@ -468,90 +414,70 @@
 
     function salvarRespostaTecnico(e) {
       e.preventDefault();
-      var key = document.getElementById('modalKey').value;
+      var id = document.getElementById('modalKey').value;
       var obs = document.getElementById('modalObs').value;
       var m1 = document.getElementById('modalMat1').value.trim();
       var m2 = document.getElementById('modalMat2').value.trim();
       var m3 = document.getElementById('modalMat3').value.trim();
       var fotoInput = document.getElementById('modalFoto');
 
-      var dadosAtualizados = {
-        obsTecnico: obs,
-        mat1: m1,
-        mat2: m2,
-        mat3: m3,
-        status: 'Concluído'
-      };
-
+      var fotoBase64 = '';
       if (fotoInput.files && fotoInput.files[0]) {
         var reader = new FileReader();
         reader.onload = function(evt) {
-          dadosAtualizados.fotoTecnico = evt.target.result;
-          finalizarAtualizacao(key, dadosAtualizados);
+          fotoBase64 = evt.target.result;
+          aplicarAtualizacao(id, obs, m1, m2, m3, fotoBase64);
         };
         reader.readAsDataURL(fotoInput.files[0]);
       } else {
-        finalizarAtualizacao(key, dadosAtualizados);
+        aplicarAtualizacao(id, obs, m1, m2, m3, '');
       }
     }
 
-    function finalizarAtualizacao(key, dados) {
-      try {
-        db.child(key).update(dados);
-      } catch(e) {
-        for (var i = 0; i < demandasList.length; i++) {
-          if (demandasList[i].id == key || demandasList[i].key == key) {
-            Object.assign(demandasList[i], dados);
-            break;
-          }
+    function aplicarAtualizacao(id, obs, m1, m2, m3, foto) {
+      for (var i = 0; i < demandasList.length; i++) {
+        if (demandasList[i].id == id) {
+          demandasList[i].obsTecnico = obs;
+          demandasList[i].mat1 = m1;
+          demandasList[i].mat2 = m2;
+          demandasList[i].mat3 = m3;
+          if (foto) demandasList[i].fotoTecnico = foto;
+          demandasList[i].status = 'Concluído';
+          break;
         }
-        localStorage.setItem('ifms_demandas_v8', JSON.stringify(demandasList));
-        renderDemandas();
-        renderRelatorio();
       }
+      salvarEAtualizar();
       fecharModal();
     }
 
-    function mudarStatus(key, st) {
-      try { db.child(key).update({ status: st }); } catch(e) {
+    function mudarStatus(id, st) {
+      for (var i = 0; i < demandasList.length; i++) {
+        if (demandasList[i].id == id) {
+          demandasList[i].status = st;
+          break;
+        }
+      }
+      salvarEAtualizar();
+    }
+
+    function pausar(id) {
+      var m = prompt("Motivo de não realizar/pausar:");
+      if (m) {
         for (var i = 0; i < demandasList.length; i++) {
-          if (demandasList[i].id == key || demandasList[i].key == key) {
-            demandasList[i].status = st;
+          if (demandasList[i].id == id) {
+            demandasList[i].motivoPausa = m;
+            demandasList[i].status = 'Impedido/Pausado';
             break;
           }
         }
-        localStorage.setItem('ifms_demandas_v8', JSON.stringify(demandasList));
-        renderDemandas();
-        renderRelatorio();
+        salvarEAtualizar();
       }
     }
 
-    function pausar(key) {
-      var m = prompt("Motivo de não realizar/pausar:");
-      if (m) {
-        try { db.child(key).update({ motivoPausa: m, status: 'Impedido/Pausado' }); } catch(e) {
-          for (var i = 0; i < demandasList.length; i++) {
-            if (demandasList[i].id == key || demandasList[i].key == key) {
-              demandasList[i].motivoPausa = m;
-              demandasList[i].status = 'Impedido/Pausado';
-              break;
-            }
-          }
-          localStorage.setItem('ifms_demandas_v8', JSON.stringify(demandasList));
-          renderDemandas();
-          renderRelatorio();
-        }
-      }
-    }
-
-    function excluir(key) {
+    function excluir(id) {
       if (confirm("Excluir esta O.S.?")) {
-        try { db.child(key).remove(); } catch(e) {
-          demandasList = demandasList.filter(function(d) { return d.id != key && d.key != key; });
-          localStorage.setItem('ifms_demandas_v8', JSON.stringify(demandasList));
-          renderDemandas();
-          renderRelatorio();
-        }
+        demandasList = demandasList.filter(function(d) { return d.id != id; });
+        salvarEAtualizar();
       }
     }
 
@@ -579,7 +505,6 @@
       conclElem.innerText = concCount;
       naoConclElem.innerText = naoConcCount;
 
-      // TABELA 1: OS
       tb.innerHTML = '';
       for (var j = 0; j < demandasList.length; j++) {
         var d = demandasList[j];
@@ -595,7 +520,6 @@
         '</tr>';
       }
 
-      // TABELA 2: MATERIAIS CONSOLIDADOS USADOS PELO TÉCNICO
       var contagemMateriais = {};
       for (var k = 0; k < demandasList.length; k++) {
         var item = demandasList[k];
@@ -627,6 +551,9 @@
         }
       }
     }
+
+    document.addEventListener('DOMContentLoaded', carregarLocal);
+    window.onload = carregarLocal;
   </script>
 </body>
 </html>
