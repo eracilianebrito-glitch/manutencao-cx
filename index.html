@@ -38,6 +38,7 @@
     .btn-blue { background: #2563eb; color: white; }
     .btn-amber { background: #d97706; color: white; }
     .btn-red { background: #dc2626; color: white; }
+    .btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 8px; }
     .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
     .stat-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
     .stat-val { font-size: 20px; font-weight: 800; }
@@ -53,199 +54,236 @@
     
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal-card { background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    
+    .login-container { max-width: 360px; margin: 60px auto 0 auto; text-align: center; padding: 0 16px; }
+    .pin-input { font-size: 24px; text-align: center; letter-spacing: 12px; font-weight: bold; padding: 12px; margin-bottom: 16px; }
+    .remember-box { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 16px; font-size: 13px; color: #475569; }
+    .remember-box input { width: auto; }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="header-content">
-      <div style="display:flex; align-items:center;">
-        <div class="logo-box">IF</div>
-        <div>
-          <h1 style="font-size:16px;">IFMS Campus Coxim</h1>
-          <p style="font-size:11px; opacity:0.8;">Manutenção & Ordens de Serviço</p>
+  <!-- TELA DE LOGIN POR PIN -->
+  <div id="sec-login" class="login-container">
+    <div class="card" style="padding: 24px;">
+      <div class="logo-box" style="margin: 0 auto 12px auto; width: 48px; height: 48px; font-size: 20px; background: #065f46; color: white;">IF</div>
+      <h2 style="color: #065f46; font-size: 18px; margin-bottom: 4px;">IFMS Coxim</h2>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 20px;">Sistema de Manutenção</p>
+      
+      <form onsubmit="autenticarPin(event)">
+        <div class="form-group">
+          <label>Digite seu PIN de Acesso</label>
+          <input type="password" id="inputPin" class="pin-input" maxlength="4" placeholder="••••" required pattern="[0-9]*" inputmode="numeric">
         </div>
-      </div>
-      <button id="btnInstalar" class="btn-install" onclick="instalarPWA()">📲 Instalar App</button>
-    </div>
-  </header>
-
-  <div class="nav-tabs">
-    <button onclick="switchTab('demandas')" id="tab-demandas" class="tab-btn active">Demandas</button>
-    <button onclick="switchTab('nova')" id="tab-nova" class="tab-btn">Nova O.S.</button>
-    <button onclick="switchTab('relatorio')" id="tab-relatorio" class="tab-btn">Relatório</button>
-  </div>
-
-  <main>
-    <section id="sec-demandas">
-      <div id="listaDemandas"><p style="text-align:center; padding:20px; color:#94a3b8;">Sincronizando com a nuvem...</p></div>
-    </section>
-
-    <section id="sec-nova" class="hidden">
-      <div class="card">
-        <h2 style="font-size:16px; margin-bottom:12px; color:#065f46;">Abrir Nova Ordem de Serviço</h2>
-        <form onsubmit="salvarNovaOS(event)">
-          <div class="form-group">
-            <label>Bloco / Local *</label>
-            <select id="osBloco" required>
-              <option value="">Selecione o local...</option>
-              <option value="Bloco Administrativo">Bloco Administrativo</option>
-              <option value="Bloco de Ensino">Bloco de Ensino</option>
-              <option value="Bloco de Laboratórios">Bloco de Laboratórios</option>
-              <option value="Hotel Tecnológico">Hotel Tecnológico</option>
-              <option value="LAREN">LAREN</option>
-              <option value="Refeitório">Refeitório</option>
-              <option value="Área Externa / Quadra">Área Externa / Quadra</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Sala / Ambiente Específico *</label>
-            <input type="text" id="osSala" required placeholder="Ex: Sala 04, Cozinha, Banheiro">
-          </div>
-
-          <div class="form-group">
-            <label>Tipo de Serviço *</label>
-            <select id="osCategoria" required>
-              <option value="Elétrico">⚡ Elétrico</option>
-              <option value="Hidráulico">💧 Hidráulico</option>
-              <option value="Pintura">🎨 Pintura</option>
-              <option value="Ar Condicionado">❄️ Ar Condicionado</option>
-              <option value="Limpeza">🧹 Limpeza</option>
-              <option value="Manutenção Geral">🛠️ Manutenção Geral</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Prioridade / Urgência *</label>
-            <select id="osUrgencia" required>
-              <option value="Normal">Normal</option>
-              <option value="Urgente">🚨 URGENTE</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Solicitante (Seu Nome) *</label>
-            <input type="text" id="osSolicitante" required placeholder="Ex: Prof. Carlos">
-          </div>
-
-          <div class="form-group">
-            <label>Resumo do Problema *</label>
-            <textarea id="osResumo" required rows="3" placeholder="Descreva brevemente o problema..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Foto Inicial do Problema (Opcional)</label>
-            <input type="file" id="osFoto" accept="image/*">
-          </div>
-
-          <button type="submit" id="btnSalvarOS" class="btn">Enviar Ordem de Serviço</button>
-        </form>
-      </div>
-    </section>
-
-    <section id="sec-relatorio" class="hidden">
-      <div class="sub-tabs">
-        <button id="subtab-os" class="sub-tab-btn active" onclick="switchRelatorioTab('os')">📊 Relatório de O.S.</button>
-        <button id="subtab-mat" class="sub-tab-btn" onclick="switchRelatorioTab('materiais')">📦 Relatório de Materiais</button>
-      </div>
-
-      <div id="rel-visao-os">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div style="font-size:11px; color:#64748b;">Total de O.S.</div>
-            <div id="statTotal" class="stat-val">0</div>
-          </div>
-          <div class="stat-card" style="border-color:#a7f3d0; background:#f0fdf4;">
-            <div style="font-size:11px; color:#059669; font-weight:bold;">Realizadas</div>
-            <div id="statConcluidas" class="stat-val" style="color:#059669;">0</div>
-          </div>
-          <div class="stat-card" style="border-color:#fef08a; background:#fefce8;">
-            <div style="font-size:11px; color:#ca8a04; font-weight:bold;">Não Realizadas</div>
-            <div id="statNaoRealizadas" class="stat-val" style="color:#ca8a04;">0</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="font-size:14px; color:#065f46;">Demandas Realizadas e Pendentes</h3>
-            <button onclick="window.print()" class="btn btn-sm btn-blue">Imprimir / PDF</button>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Local</th>
-                <th>Serviço</th>
-                <th>Urgência</th>
-                <th>Situação</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaRelatorio"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="rel-visao-materiais" class="hidden">
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="font-size:14px; color:#065f46;">Consumo Mensal de Materiais Utilizados</h3>
-            <button onclick="window.print()" class="btn btn-sm btn-blue">Imprimir / PDF</button>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Material</th>
-                <th>Vezes Utilizado</th>
-                <th>Último Local Aplicado</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaMateriais"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <div id="modalTecnico" class="modal-overlay hidden">
-    <div class="modal-card">
-      <h3 style="color:#065f46; margin-bottom:12px; font-size:16px;">🛠️ Resposta do Oficial de Manutenção</h3>
-      <form onsubmit="salvarRespostaTecnico(event)">
-        <input type="hidden" id="modalKey">
         
-        <div class="form-group">
-          <label>Observações do Serviço Realizado *</label>
-          <textarea id="modalObs" required rows="3" placeholder="Ex: Substituído o disjuntor queimado por um novo de 20A."></textarea>
+        <div class="remember-box">
+          <input type="checkbox" id="chkLembrar" checked>
+          <label for="chkLembrar" style="margin:0; font-weight:normal; cursor:pointer;">Manter conectado neste aparelho</label>
         </div>
 
-        <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px dashed #cbd5e1; margin-bottom:12px;">
-          <label style="color:#065f46; margin-bottom:8px;">📦 Materiais Utilizados no Serviço</label>
-          <div class="form-group">
-            <input type="text" id="modalMat1" placeholder="Material 1 (Ex: Disjuntor 20A)">
-          </div>
-          <div class="form-group">
-            <input type="text" id="modalMat2" placeholder="Material 2 (Ex: Fita Isolante)">
-          </div>
-          <div class="form-group">
-            <input type="text" id="modalMat3" placeholder="Material 3 (Ex: Fio 2.5mm)">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Foto do Serviço Concluído (Opcional)</label>
-          <input type="file" id="modalFoto" accept="image/*">
-        </div>
-
-        <div style="display:flex; gap:8px; margin-top:16px;">
-          <button type="submit" id="btnSalvarModal" class="btn">Concluir e Salvar</button>
-          <button type="button" onclick="fecharModal()" class="btn btn-red" style="width: auto;">Cancelar</button>
-        </div>
+        <button type="submit" class="btn">Entrar</button>
       </form>
     </div>
   </div>
 
+  <!-- APLICAÇÃO PRINCIPAL -->
+  <div id="app-main" class="hidden">
+    <header>
+      <div class="header-content">
+        <div style="display:flex; align-items:center;">
+          <div class="logo-box">IF</div>
+          <div>
+            <h1 style="font-size:16px;">IFMS Campus Coxim</h1>
+            <p style="font-size:11px; opacity:0.8;">
+              <span id="labelPerfil"></span> 
+              <button onclick="fazerLogout()" class="btn-logout">Sair 🔒</button>
+            </p>
+          </div>
+        </div>
+        <button id="btnInstalar" class="btn-install" onclick="instalarPWA()">📲 Instalar App</button>
+      </div>
+    </header>
+
+    <div class="nav-tabs" id="barNavTabs">
+      <button onclick="switchTab('demandas')" id="tab-demandas" class="tab-btn active">Demandas</button>
+      <button onclick="switchTab('nova')" id="tab-nova" class="tab-btn">Nova O.S.</button>
+      <button onclick="switchTab('relatorio')" id="tab-relatorio" class="tab-btn">Relatório</button>
+    </div>
+
+    <main>
+      <section id="sec-demandas">
+        <div id="listaDemandas"><p style="text-align:center; padding:20px; color:#94a3b8;">Sincronizando com a nuvem...</p></div>
+      </section>
+
+      <section id="sec-nova" class="hidden">
+        <div class="card">
+          <h2 style="font-size:16px; margin-bottom:12px; color:#065f46;">Abrir Nova Ordem de Serviço</h2>
+          <form onsubmit="salvarNovaOS(event)">
+            <div class="form-group">
+              <label>Bloco / Local *</label>
+              <select id="osBloco" required>
+                <option value="">Selecione o local...</option>
+                <option value="Bloco Administrativo">Bloco Administrativo</option>
+                <option value="Bloco de Ensino">Bloco de Ensino</option>
+                <option value="Bloco de Laboratórios">Bloco de Laboratórios</option>
+                <option value="Hotel Tecnológico">Hotel Tecnológico</option>
+                <option value="LAREN">LAREN</option>
+                <option value="Refeitório">Refeitório</option>
+                <option value="Área Externa / Quadra">Área Externa / Quadra</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Sala / Ambiente Específico *</label>
+              <input type="text" id="osSala" required placeholder="Ex: Sala 04, Cozinha, Banheiro">
+            </div>
+
+            <div class="form-group">
+              <label>Tipo de Serviço *</label>
+              <select id="osCategoria" required>
+                <option value="Elétrico">⚡ Elétrico</option>
+                <option value="Hidráulico">💧 Hidráulico</option>
+                <option value="Pintura">🎨 Pintura</option>
+                <option value="Ar Condicionado">❄️ Ar Condicionado</option>
+                <option value="Limpeza">🧹 Limpeza</option>
+                <option value="Manutenção Geral">🛠️ Manutenção Geral</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Prioridade / Urgência *</label>
+              <select id="osUrgencia" required>
+                <option value="Normal">Normal</option>
+                <option value="Urgente">🚨 URGENTE</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Solicitante (Seu Nome) *</label>
+              <input type="text" id="osSolicitante" required placeholder="Ex: Prof. Carlos">
+            </div>
+
+            <div class="form-group">
+              <label>Resumo do Problema *</label>
+              <textarea id="osResumo" required rows="3" placeholder="Descreva brevemente o problema..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Foto Inicial do Problema (Opcional)</label>
+              <input type="file" id="osFoto" accept="image/*">
+            </div>
+
+            <button type="submit" id="btnSalvarOS" class="btn">Enviar Ordem de Serviço</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="sec-relatorio" class="hidden">
+        <div class="sub-tabs">
+          <button id="subtab-os" class="sub-tab-btn active" onclick="switchRelatorioTab('os')">📊 Relatório de O.S.</button>
+          <button id="subtab-mat" class="sub-tab-btn" onclick="switchRelatorioTab('materiais')">📦 Relatório de Materiais</button>
+        </div>
+
+        <div id="rel-visao-os">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div style="font-size:11px; color:#64748b;">Total de O.S.</div>
+              <div id="statTotal" class="stat-val">0</div>
+            </div>
+            <div class="stat-card" style="border-color:#a7f3d0; background:#f0fdf4;">
+              <div style="font-size:11px; color:#059669; font-weight:bold;">Realizadas</div>
+              <div id="statConcluidas" class="stat-val" style="color:#059669;">0</div>
+            </div>
+            <div class="stat-card" style="border-color:#fef08a; background:#fefce8;">
+              <div style="font-size:11px; color:#ca8a04; font-weight:bold;">Não Realizadas</div>
+              <div id="statNaoRealizadas" class="stat-val" style="color:#ca8a04;">0</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h3 style="font-size:14px; color:#065f46;">Demandas Realizadas e Pendentes</h3>
+              <button onclick="window.print()" class="btn btn-sm btn-blue">Imprimir / PDF</button>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Local</th>
+                  <th>Serviço</th>
+                  <th>Urgência</th>
+                  <th>Situação</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaRelatorio"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="rel-visao-materiais" class="hidden">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h3 style="font-size:14px; color:#065f46;">Consumo Mensal de Materiais Utilizados</h3>
+              <button onclick="window.print()" class="btn btn-sm btn-blue">Imprimir / PDF</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Vezes Utilizado</th>
+                  <th>Último Local Aplicado</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaMateriais"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="modalTecnico" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3 style="color:#065f46; margin-bottom:12px; font-size:16px;">🛠️ Resposta do Oficial de Manutenção</h3>
+        <form onsubmit="salvarRespostaTecnico(event)">
+          <input type="hidden" id="modalKey">
+          
+          <div class="form-group">
+            <label>Observações do Serviço Realizado *</label>
+            <textarea id="modalObs" required rows="3" placeholder="Ex: Substituído o disjuntor queimado por um novo de 20A."></textarea>
+          </div>
+
+          <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px dashed #cbd5e1; margin-bottom:12px;">
+            <label style="color:#065f46; margin-bottom:8px;">📦 Materiais Utilizados no Serviço</label>
+            <div class="form-group">
+              <input type="text" id="modalMat1" placeholder="Material 1 (Ex: Disjuntor 20A)">
+            </div>
+            <div class="form-group">
+              <input type="text" id="modalMat2" placeholder="Material 2 (Ex: Fita Isolante)">
+            </div>
+            <div class="form-group">
+              <input type="text" id="modalMat3" placeholder="Material 3 (Ex: Fio 2.5mm)">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Foto do Serviço Concluído (Opcional)</label>
+            <input type="file" id="modalFoto" accept="image/*">
+          </div>
+
+          <div style="display:flex; gap:8px; margin-top:16px;">
+            <button type="submit" id="btnSalvarModal" class="btn">Concluir e Salvar</button>
+            <button type="button" onclick="fecharModal()" class="btn btn-red" style="width: auto;">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script>
+    const PIN_GESTOR = "6789";  // Gestores
+    const PIN_TECNICO = "1234"; // Oficial de Manutenção
+
     const firebaseConfig = {
       apiKey: "AIzaSyB8mh9ZwCEubDx0IQy_b-ZbKTkO2HNbsV4",
       authDomain: "manutencao-cx.firebaseapp.com",
@@ -259,6 +297,68 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref('demandas');
+
+    let usuarioAtual = localStorage.getItem('ifms_user_role') || null;
+
+    window.onload = function() {
+      if (usuarioAtual) {
+        carregarInterfacePorPerfil(usuarioAtual);
+      }
+    };
+
+    function autenticarPin(e) {
+      e.preventDefault();
+      const pin = document.getElementById('inputPin').value;
+      const manterConectado = document.getElementById('chkLembrar').checked;
+      
+      var role = null;
+      if (pin === PIN_GESTOR) {
+        role = 'gestor';
+      } else if (pin === PIN_TECNICO) {
+        role = 'tecnico';
+      } else {
+        alert("PIN incorreto!");
+        document.getElementById('inputPin').value = '';
+        return;
+      }
+
+      usuarioAtual = role;
+      if (manterConectado) {
+        localStorage.setItem('ifms_user_role', role);
+      }
+      carregarInterfacePorPerfil(role);
+    }
+
+    function fazerLogout() {
+      localStorage.removeItem('ifms_user_role');
+      usuarioAtual = null;
+      document.getElementById('app-main').className = 'hidden';
+      document.getElementById('sec-login').className = 'login-container';
+      document.getElementById('inputPin').value = '';
+    }
+
+    function carregarInterfacePorPerfil(role) {
+      document.getElementById('sec-login').className = 'hidden';
+      document.getElementById('app-main').className = '';
+
+      const btnNova = document.getElementById('tab-nova');
+      const btnRelatorio = document.getElementById('tab-relatorio');
+      const labelPerfil = document.getElementById('labelPerfil');
+
+      if (role === 'tecnico') {
+        labelPerfil.innerText = "Oficial de Manutenção";
+        btnNova.style.display = 'none';
+        btnRelatorio.style.display = 'none';
+        document.getElementById('tab-demandas').style.width = '100%';
+        switchTab('demandas');
+      } else {
+        labelPerfil.innerText = "Gestão / Coordenação";
+        btnNova.style.display = 'block';
+        btnRelatorio.style.display = 'block';
+        document.getElementById('tab-demandas').style.width = '33.33%';
+        switchTab('demandas');
+      }
+    }
 
     let deferredPrompt;
     if ('serviceWorker' in navigator) {
@@ -286,7 +386,6 @@
 
     var demandasList = [];
 
-    // LEITURA EM TEMPO REAL COM SYNC COMPLETO
     db.on('value', function(snapshot) {
       demandasList = [];
       var data = snapshot.val();
@@ -299,11 +398,8 @@
       }
       renderDemandas();
       renderRelatorio();
-    }, function(error) {
-      console.log("Erro no Firebase, carregando local:", error);
     });
 
-    // COMPRESSOR DE IMAGEM AUTOMÁTICO (PARA NÃO TRAVAR O CELULAR)
     function comprimirFoto(file, callback) {
       if (!file) { callback(''); return; }
       var reader = new FileReader();
