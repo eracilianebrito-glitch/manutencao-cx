@@ -2,7 +2,8 @@
   "name": "Manutenção IFMS Coxim",
   "short_name": "Manutenção IFMS",
   "description": "Sistema de Gestão de Ordens de Serviço do IFMS Campus Coxim",
-  "start_url": "./index.html",
+  "start_url": "/manutencao-cx/",
+  "scope": "/manutencao-cx/",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#065f46",
@@ -10,12 +11,14 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1040/1040230.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1040/1040230.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
