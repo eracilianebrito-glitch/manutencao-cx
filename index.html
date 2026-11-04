@@ -5,8 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Manutenção - IFMS Coxim</title>
   
+  <!-- CONEXÃO PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#065f46">
+  
+  <!-- BIBLIOTECAS FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
@@ -48,6 +53,7 @@
     .sub-tab-btn.active { background: #065f46; color: white; border-color: #065f46; }
     .tech-box { background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #a7f3d0; margin-top: 8px; }
     
+    /* MODAL DE RESPOSTA DO OFICIAL DE MANUTENÇÃO */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal-card { background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
   </style>
@@ -76,7 +82,7 @@
   <main>
     <!-- LISTA DE DEMANDAS -->
     <section id="sec-demandas">
-      <div id="listaDemandas"></div>
+      <div id="listaDemandas"><p style="text-align:center; padding:20px; color:#94a3b8;">Carregando demandas em tempo real...</p></div>
     </section>
 
     <!-- NOVA OS (SOLICITANTE) -->
@@ -249,27 +255,62 @@
   </div>
 
   <script>
-    var STORAGE_KEY = 'ifms_demandas_v9_local';
+    // CHAVES DO FIREBASE DO SEU PROJETO MANUTENCAO-CX
+    const firebaseConfig = {
+      apiKey: "AIzaSyB8mh9ZwCEubDx0IQy_b-ZbKTkO2HNbsV4",
+      authDomain: "manutencao-cx.firebaseapp.com",
+      databaseURL: "https://manutencao-cx-default-rtdb.firebaseio.com",
+      projectId: "manutencao-cx",
+      storageBucket: "manutencao-cx.firebasestorage.app",
+      messagingSenderId: "1057274148404",
+      appId: "1:1057274148404:web:94f56772080d6f4fd5fc61",
+      measurementId: "G-VC1WZ91R1M"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref('demandas');
+
+    // REGISTRO PWA
+    let deferredPrompt;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(function(e) { console.log(e); });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('btnInstalar');
+      if (btn) btn.style.display = 'block';
+    });
+
+    function instalarPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('btnInstalar').style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
     var demandasList = [];
 
-    function carregarLocal() {
-      var salvas = localStorage.getItem(STORAGE_KEY);
-      if (salvas) {
-        try { demandasList = JSON.parse(salvas); } catch(e) { demandasList = []; }
-      } else {
-        demandasList = [
-          { id: 1, bloco: 'Bloco de Laboratórios', sala: 'Lab 03', categoria: 'Elétrico', urgencia: 'Urgente', solicitante: 'Prof. Ricardo', resumo: 'Bancada principal sem energia.', status: 'Pendente', data: '04/11/2026', motivoPausa: '', foto: '', obsTecnico: '', mat1: '', mat2: '', mat3: '', fotoTecnico: '' },
-          { id: 2, bloco: 'Refeitório', sala: 'Cozinha', categoria: 'Hidráulico', urgencia: 'Normal', solicitante: 'Coord. Ana', resumo: 'Torneira da pia a pingar.', status: 'Concluído', data: '04/11/2026', motivoPausa: '', foto: '', obsTecnico: 'Trocada a vedação da torneira.', mat1: 'Veda Rosca', mat2: 'Reparo de Torneira', mat3: '', fotoTecnico: '' }
-        ];
-        salvarNoStorage();
+    // LEITURA EM TEMPO REAL NO FIREBASE
+    db.on('value', function(snapshot) {
+      demandasList = [];
+      var data = snapshot.val();
+      if (data) {
+        Object.keys(data).forEach(function(key) {
+          var item = data[key];
+          item.key = key;
+          demandasList.unshift(item);
+        });
       }
       renderDemandas();
       renderRelatorio();
-    }
-
-    function salvarNoStorage() {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(demandasList)); } catch(e) {}
-    }
+    });
 
     function switchTab(tab) {
       document.getElementById('sec-demandas').className = 'hidden';
@@ -335,9 +376,9 @@
           '<div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:10px;">' +
             '<span>' + d.solicitante + ' (' + d.data + ')</span>' +
             '<div>' +
-              (d.status === 'Pendente' ? '<button onclick="mudarStatus(' + d.id + ', \'Em Andamento\')" class="btn btn-sm btn-blue">Iniciar</button>' : '') +
-              (d.status === 'Em Andamento' || d.status === 'Impedido/Pausado' ? '<button onclick="pausar(' + d.id + ')" class="btn btn-sm btn-amber">Pausar</button><button onclick="abrirModalTecnico(' + d.id + ')" class="btn btn-sm">Concluir / Registrar</button>' : '') +
-              '<button onclick="excluir(' + d.id + ')" class="btn btn-sm btn-red">X</button>' +
+              (d.status === 'Pendente' ? '<button onclick="mudarStatus(\'' + d.key + '\', \'Em Andamento\')" class="btn btn-sm btn-blue">Iniciar</button>' : '') +
+              (d.status === 'Em Andamento' || d.status === 'Impedido/Pausado' ? '<button onclick="pausar(\'' + d.key + '\')" class="btn btn-sm btn-amber">Pausar</button><button onclick="abrirModalTecnico(\'' + d.key + '\')" class="btn btn-sm">Concluir / Registrar</button>' : '') +
+              '<button onclick="excluir(\'' + d.key + '\')" class="btn btn-sm btn-red">X</button>' +
             '</div>' +
           '</div>';
         container.appendChild(card);
@@ -349,7 +390,6 @@
       var fotoInput = document.getElementById('osFoto');
       
       var novo = {
-        id: Date.now(),
         bloco: document.getElementById('osBloco').value,
         sala: document.getElementById('osSala').value,
         categoria: document.getElementById('osCategoria').value,
@@ -371,22 +411,14 @@
         var reader = new FileReader();
         reader.onload = function(evt) {
           novo.foto = evt.target.result;
-          demandasList.unshift(novo);
-          salvarEAtualizar();
+          db.push(novo);
           limparEVoltar();
         };
         reader.readAsDataURL(fotoInput.files[0]);
       } else {
-        demandasList.unshift(novo);
-        salvarEAtualizar();
+        db.push(novo);
         limparEVoltar();
       }
-    }
-
-    function salvarEAtualizar() {
-      salvarNoStorage();
-      renderDemandas();
-      renderRelatorio();
     }
 
     function limparEVoltar() {
@@ -398,8 +430,8 @@
       switchTab('demandas');
     }
 
-    function abrirModalTecnico(id) {
-      document.getElementById('modalKey').value = id;
+    function abrirModalTecnico(key) {
+      document.getElementById('modalKey').value = key;
       document.getElementById('modalObs').value = '';
       document.getElementById('modalMat1').value = '';
       document.getElementById('modalMat2').value = '';
@@ -414,70 +446,49 @@
 
     function salvarRespostaTecnico(e) {
       e.preventDefault();
-      var id = document.getElementById('modalKey').value;
+      var key = document.getElementById('modalKey').value;
       var obs = document.getElementById('modalObs').value;
       var m1 = document.getElementById('modalMat1').value.trim();
       var m2 = document.getElementById('modalMat2').value.trim();
       var m3 = document.getElementById('modalMat3').value.trim();
       var fotoInput = document.getElementById('modalFoto');
 
-      var fotoBase64 = '';
+      var dadosAtualizados = {
+        obsTecnico: obs,
+        mat1: m1,
+        mat2: m2,
+        mat3: m3,
+        status: 'Concluído'
+      };
+
       if (fotoInput.files && fotoInput.files[0]) {
         var reader = new FileReader();
         reader.onload = function(evt) {
-          fotoBase64 = evt.target.result;
-          aplicarAtualizacao(id, obs, m1, m2, m3, fotoBase64);
+          dadosAtualizados.fotoTecnico = evt.target.result;
+          db.child(key).update(dadosAtualizados);
+          fecharModal();
         };
         reader.readAsDataURL(fotoInput.files[0]);
       } else {
-        aplicarAtualizacao(id, obs, m1, m2, m3, '');
+        db.child(key).update(dadosAtualizados);
+        fecharModal();
       }
     }
 
-    function aplicarAtualizacao(id, obs, m1, m2, m3, foto) {
-      for (var i = 0; i < demandasList.length; i++) {
-        if (demandasList[i].id == id) {
-          demandasList[i].obsTecnico = obs;
-          demandasList[i].mat1 = m1;
-          demandasList[i].mat2 = m2;
-          demandasList[i].mat3 = m3;
-          if (foto) demandasList[i].fotoTecnico = foto;
-          demandasList[i].status = 'Concluído';
-          break;
-        }
-      }
-      salvarEAtualizar();
-      fecharModal();
+    function mudarStatus(key, st) {
+      db.child(key).update({ status: st });
     }
 
-    function mudarStatus(id, st) {
-      for (var i = 0; i < demandasList.length; i++) {
-        if (demandasList[i].id == id) {
-          demandasList[i].status = st;
-          break;
-        }
-      }
-      salvarEAtualizar();
-    }
-
-    function pausar(id) {
+    function pausar(key) {
       var m = prompt("Motivo de não realizar/pausar:");
       if (m) {
-        for (var i = 0; i < demandasList.length; i++) {
-          if (demandasList[i].id == id) {
-            demandasList[i].motivoPausa = m;
-            demandasList[i].status = 'Impedido/Pausado';
-            break;
-          }
-        }
-        salvarEAtualizar();
+        db.child(key).update({ motivoPausa: m, status: 'Impedido/Pausado' });
       }
     }
 
-    function excluir(id) {
+    function excluir(key) {
       if (confirm("Excluir esta O.S.?")) {
-        demandasList = demandasList.filter(function(d) { return d.id != id; });
-        salvarEAtualizar();
+        db.child(key).remove();
       }
     }
 
@@ -551,9 +562,6 @@
         }
       }
     }
-
-    document.addEventListener('DOMContentLoaded', carregarLocal);
-    window.onload = carregarLocal;
   </script>
 </body>
 </html>
